@@ -1,0 +1,5 @@
+lxml
+requests
+python-dotenv
+psycopg2
+tqdm
