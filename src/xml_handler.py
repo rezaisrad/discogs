@@ -5,9 +5,11 @@ from tqdm import tqdm
 import gzip
 from lxml import etree
 import os
-from db import get_db_cursor, insert_batch
+from dotenv import load_dotenv
 
-BATCH_SIZE = 100000 
+load_dotenv()
+
+BATCH_SIZE = os.getenv("BATCH_SIZE", 10000)
 
 
 def log_method(func):
@@ -23,11 +25,12 @@ def log_method(func):
 
 
 class XMLDataHandler:
-    def __init__(self, url, destination_dir="./"):
+    def __init__(self, url, destination_dir="./", data_store=None):
         self.url = url
         self.destination_dir = destination_dir
         self.filename = self._get_filename_from_url()
         self.filepath = os.path.join(self.destination_dir, self.filename)
+        self.data_store = data_store
 
     def _get_filename_from_url(self):
         parsed_url = urlparse(self.url)
@@ -61,7 +64,9 @@ class XMLDataHandler:
         try:
             with gzip.open(self.filepath, "rb") as gz_file:
                 for _, elem in etree.iterparse(gz_file, events=("end",), tag="release"):
-                    data_batch.append(ReleaseParser(elem).parse())
+                    # Assume ReleaseParser(elem).parse() returns a dict representing a release
+                    parsed_data = ReleaseParser(elem).parse()
+                    data_batch.append(parsed_data)
                     elem.clear()
                     release_count += 1
 
@@ -69,18 +74,16 @@ class XMLDataHandler:
                         logging.info(
                             f"Inserting batch of {len(data_batch)} releases, total parsed: {release_count}"
                         )
-                        with get_db_cursor(commit=True) as cursor:
-                            insert_batch(cursor, "releases", data_batch)
-                        data_batch = [] 
+                        self.data_store.insert(data_batch)
+                        data_batch = []
 
                 if data_batch:
                     logging.info(
                         f"Inserting final batch of {len(data_batch)} releases, total parsed: {release_count}"
                     )
-                    with get_db_cursor(commit=True) as cursor:
-                        insert_batch(cursor, "releases", data_batch)
+                    self.data_store.insert(data_batch)
         except Exception as e:
-            logging.error(f"Error during XML parsing or DB insertion: {e}")
+            logging.error(f"Error during XML parsing or data insertion: {e}")
         logging.info(f"Completed XML parsing, total releases parsed: {release_count}")
 
 
@@ -104,7 +107,9 @@ class ReleaseParser:
             "released": self.root.findtext("released"),
             "notes": self.root.findtext("notes"),
             "data_quality": self.root.findtext("data_quality"),
-            "master_id": self._get_attribute(self.root.find("master_id"), "is_main_release"),
+            "master_id": self._get_attribute(
+                self.root.find("master_id"), "is_main_release"
+            ),
             "tracklist": self._parse_tracklist(),
             "videos": self._parse_videos(),
             "companies": self._parse_companies(),
@@ -116,7 +121,7 @@ class ReleaseParser:
         if elem is not None:
             return elem.attrib.get(attr_name)
         return None
-    
+
     def _parse_images(self):
         return [
             {
@@ -133,8 +138,16 @@ class ReleaseParser:
         return [
             {
                 "id": artist.find("id").text if artist.find("id") is not None else None,
-                "name": artist.find("name").text if artist.find("name") is not None else None,
-                "role": artist.find("role").text if artist.find("role") is not None else None,
+                "name": (
+                    artist.find("name").text
+                    if artist.find("name") is not None
+                    else None
+                ),
+                "role": (
+                    artist.find("role").text
+                    if artist.find("role") is not None
+                    else None
+                ),
             }
             for artist in self.root.findall(".//extraartists/artist")
         ]
@@ -144,7 +157,9 @@ class ReleaseParser:
             {
                 "name": self._get_attribute(format_, "name"),
                 "qty": self._get_attribute(format_, "qty"),
-                "descriptions": [desc.text for desc in format_.findall(".//description") if desc.text]
+                "descriptions": [
+                    desc.text for desc in format_.findall(".//description") if desc.text
+                ],
             }
             for format_ in self.root.findall(".//formats/format")
         ]
