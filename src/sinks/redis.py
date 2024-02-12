@@ -11,10 +11,13 @@ class RedisDataStore(BaseDataStore):
     def connect(self):
         self.connection = redis.Redis(host=self.host, port=self.port, db=self.db)
     
-    def insert(self, key, value):
+    def insert(self, records):
         if not self.connection:
             self.connect()
-        self.connection.set(key, value)
+        with self.connection.pipeline() as pipe:
+            for key, value in records.items():
+                pipe.set(key, value)
+            pipe.execute()
     
     def query(self, key):
         if not self.connection:
