@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BATCH_SIZE = os.getenv("BATCH_SIZE", 10000)
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", 10000))
 
 
 def log_method(func):
@@ -38,6 +38,7 @@ class XMLDataHandler:
 
     @log_method
     def download_file(self):
+        """Downloads the XML file."""
         if os.path.exists(self.filepath):
             logging.info(f"File already exists: {self.filepath}")
             return
@@ -55,9 +56,19 @@ class XMLDataHandler:
             for chunk in response.iter_content(chunk_size=4096):
                 file.write(chunk)
                 progress_bar.update(len(chunk))
+                
+    @log_method
+    def delete_file(self):
+        """Deletes the downloaded XML file."""
+        try:
+            os.remove(self.filepath)
+            logging.info(f"Successfully deleted file: {self.filepath}")
+        except OSError as e:
+            logging.error(f"Error deleting file {self.filepath}: {e}")
 
     @log_method
     def parse_xml(self):
+        """Parses and inserts each release from the downloaded XML file."""
         logging.info("Beginning XML parsing")
         data_batch = []
         release_count = 0
@@ -74,7 +85,11 @@ class XMLDataHandler:
                         logging.info(
                             f"Inserting batch of {len(data_batch)} releases, total parsed: {release_count}"
                         )
-                        self.data_store.insert(data_batch)
+                        try:
+                            self.data_store.insert(data_batch)
+                            logging.debug(f"Successfully inserted/updated record with id: {id}")
+                        except Exception as e:
+                            logging.error(f"Error inserting record with id: {id}: {e}")
                         data_batch = []
 
                 if data_batch:
@@ -82,6 +97,9 @@ class XMLDataHandler:
                         f"Inserting final batch of {len(data_batch)} releases, total parsed: {release_count}"
                     )
                     self.data_store.insert(data_batch)
+            
+            # If everything above completes successfully, delete the file
+            self.delete_file()
         except Exception as e:
             logging.error(f"Error during XML parsing or data insertion: {e}")
         logging.info(f"Completed XML parsing, total releases parsed: {release_count}")
