@@ -35,7 +35,6 @@ def main():
     try:
         handler.download_file()
         handler.parse_xml()
-        handler.delete_file()
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 

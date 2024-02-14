@@ -57,6 +57,11 @@ class PostgresDataStore(BaseDataStore):
             args_str = ",".join(cursor.mogrify("(%s)", (Json(data),)).decode("utf-8") for data in records)
             cursor.execute(f"INSERT INTO {self.table_name} (data) VALUES " + args_str)
 
-    def query(self, query_params):
-        # Implementation depends on specific query needs
-        pass
+    def fetch_ids(self, query):
+        """Fetches a list of IDs based on the provided query."""
+        ids = []
+        with self.get_db_cursor() as cursor:
+            cursor.execute(query)
+            for row in cursor.fetchall():
+                ids.append(row[0])  # Assuming the ID is in the first column
+        return ids

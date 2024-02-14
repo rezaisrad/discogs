@@ -1,4 +1,5 @@
 import logging
+import threading
 from urllib.parse import urlparse
 import requests
 from tqdm import tqdm
@@ -56,26 +57,15 @@ class XMLDataHandler:
             for chunk in response.iter_content(chunk_size=4096):
                 file.write(chunk)
                 progress_bar.update(len(chunk))
-                
-    @log_method
-    def delete_file(self):
-        """Deletes the downloaded XML file."""
-        try:
-            os.remove(self.filepath)
-            logging.info(f"Successfully deleted file: {self.filepath}")
-        except OSError as e:
-            logging.error(f"Error deleting file {self.filepath}: {e}")
 
     @log_method
     def parse_xml(self):
-        """Parses and inserts each release from the downloaded XML file."""
         logging.info("Beginning XML parsing")
         data_batch = []
         release_count = 0
         try:
             with gzip.open(self.filepath, "rb") as gz_file:
                 for _, elem in etree.iterparse(gz_file, events=("end",), tag="release"):
-                    # Assume ReleaseParser(elem).parse() returns a dict representing a release
                     parsed_data = ReleaseParser(elem).parse()
                     data_batch.append(parsed_data)
                     elem.clear()
@@ -85,11 +75,7 @@ class XMLDataHandler:
                         logging.info(
                             f"Inserting batch of {len(data_batch)} releases, total parsed: {release_count}"
                         )
-                        try:
-                            self.data_store.insert(data_batch)
-                            logging.debug(f"Successfully inserted/updated record with id: {id}")
-                        except Exception as e:
-                            logging.error(f"Error inserting record with id: {id}: {e}")
+                        self.data_store.insert(data_batch)
                         data_batch = []
 
                 if data_batch:
@@ -97,12 +83,27 @@ class XMLDataHandler:
                         f"Inserting final batch of {len(data_batch)} releases, total parsed: {release_count}"
                     )
                     self.data_store.insert(data_batch)
-            
-            # If everything above completes successfully, delete the file
+
+            # Successfully parsed and inserted data, now safe to delete the file
             self.delete_file()
+
+        except KeyboardInterrupt:
+            logging.info(
+                "XML parsing interrupted by user. Cleanup will not delete the file."
+            )
         except Exception as e:
             logging.error(f"Error during XML parsing or data insertion: {e}")
+
         logging.info(f"Completed XML parsing, total releases parsed: {release_count}")
+
+    @log_method
+    def delete_file(self):
+        """Deletes the downloaded XML file after successful parsing."""
+        try:
+            os.remove(self.filepath)
+            logging.info(f"Successfully deleted file: {self.filepath}")
+        except OSError as e:
+            logging.error(f"Error deleting file {self.filepath}: {e}")
 
 
 class ReleaseParser:
