@@ -1,3 +1,0 @@
-2024-02-11 08:56:23,124 - root - INFO - Starting XML parsing and processing.
-2024-02-11 08:56:23,233 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): discogs-data-dumps.s3-us-west-2.amazonaws.com:443
-2024-02-11 08:56:23,978 - urllib3.connectionpool - DEBUG - https://discogs-data-dumps.s3-us-west-2.amazonaws.com:443 "GET /data/2024/discogs_20240201_releases.xml.gz HTTP/1.1" 200 12303585322
