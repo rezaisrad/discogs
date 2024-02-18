@@ -1,18 +1,17 @@
 import logging
-import scraper
-from sinks.postgres import PostgresDataStore
+from scraper.scraper import Scraper
+from models.sinks.postgres import PostgresDataStore
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 URL = os.getenv("PROXIES_URL")
-MAX_WORKERS = int(os.getenv("MAX_WORKERS", 3))
-MAX_RETRIES = int(os.getenv("MAX_RETRIES", 5))
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", 5))
 DATABASE_URL = os.getenv("DATABASE_URL")
 TABLE_NAME = os.getenv("TABLE_NAME")
 QUERY_PATH = "../db/releases.sql"
-BATCH_SIZE = 100
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", 500))
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -22,7 +21,6 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-
 
 
 def write_to_postgres(p, releases):
@@ -125,16 +123,18 @@ def main():
     p = PostgresDataStore(DATABASE_URL, TABLE_NAME)
     release_ids = p.fetch_ids_from_file(QUERY_PATH)
     
+    # Initialize the Scraper object
+    scraper = Scraper(URL, max_workers=MAX_WORKERS)
+
     logging.info(f"Processing {len(release_ids)} release IDs in batches of {BATCH_SIZE}.")
     for i in range(0, len(release_ids), BATCH_SIZE):
         batch_ids = release_ids[i : i + BATCH_SIZE]
         logging.info(f"Processing batch {i//BATCH_SIZE + 1}/{len(release_ids)//BATCH_SIZE + 1}.")
         try:
-            releases = scraper.run_scraper(URL, batch_ids, MAX_WORKERS)
+            releases = scraper.run(batch_ids)
             write_to_postgres(p, releases)
         except Exception as e:
             logging.error(f"Error processing batch {i//BATCH_SIZE}: {e}")
-
 
 if __name__ == "__main__":
     main()

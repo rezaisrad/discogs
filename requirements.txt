@@ -1,3 +1,4 @@
+cloudscraper
 lxml
 requests
 python-dotenv

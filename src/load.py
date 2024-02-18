@@ -1,7 +1,7 @@
 import os
 import logging
 from dotenv import load_dotenv
-from xml_handler import XMLDataHandler
+from utils.xml_handler import XMLDataHandler
 from sinks.postgres import PostgresDataStore
 
 load_dotenv()
