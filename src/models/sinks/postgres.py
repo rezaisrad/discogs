@@ -10,7 +10,7 @@ class PostgresDataStore(BaseDataStore):
         self.database_url = database_url
         self.table_name = table_name
         self.conn = None
-        logging.info(f"Initializing PostgresDataStore for table: {table_name}")
+        logging.info(f"Initializing PostgresDataStore")
 
     def connect(self):
         """Establishes a database connection if not already connected."""
