@@ -1,4 +1,4 @@
-# Discogs Data Scraper
+# Discogs Data Extractor
 
 ## Overview
 Tool for extracting music release information from Discogs, designed for efficiency and ease of use. Utilizes multi-threading, proxy rotation, and integrates with PostgreSQL for data storage.
