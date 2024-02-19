@@ -14,7 +14,7 @@ QUERY_PATH = "../db/releases.sql"
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", 500))
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(threadName)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler("debug.log"),
@@ -36,7 +36,7 @@ def write_to_postgres(p, releases):
 
 def insert_release_sellers(p, releases):
     """Insert release sellers data into the release_sellers table."""
-    logging.info("Inserting release sellers data.")
+    logging.info(f"Inserting {len(releases)} release sellers data.")
     try:
         sellers_data = [
         (
@@ -68,13 +68,13 @@ def insert_release_sellers(p, releases):
         p.bulk_insert(query, sellers_data)
         logging.info("Successfully inserted release sellers data.")
     except Exception as e:
-        logging.error(f"Failed to insert release sellers data: {e}")
+        logging.error(f"Failed to insert {len(releases)} release sellers data: {e}")
 
 
 
 def insert_release_details(p, releases):
     """Insert release details data into the release_details table."""
-    logging.info("Inserting release details data.")
+    logging.info(f"Inserting {len(releases)} release details data.")
     try:
         details_data = [
             (
@@ -97,14 +97,14 @@ def insert_release_details(p, releases):
         ) VALUES %s
         """
         p.bulk_insert(query, details_data)
-        logging.info("Successfully inserted release details data.")
+        logging.info(f"Successfully inserted {len(releases)} release details data.")
     except Exception as e:
-        logging.error(f"Failed to insert release details data: {e}")
+        logging.error(f"Failed to insert {len(releases)} release details data: {e}")
 
 
 def insert_release_wants_haves(p, releases, type_):
     """Insert release wants/haves data into the release_wants or release_haves table."""
-    logging.info("Inserting release want/haves data.")
+    logging.info(f"Inserting {len(releases)} release want/haves data.")
     try:
         table_name = f"release_{type_}s"
         data = [
@@ -114,9 +114,9 @@ def insert_release_wants_haves(p, releases, type_):
         ]
         query = f"INSERT INTO {table_name} (release_id, username) VALUES %s"
         p.bulk_insert(query, data)
-        logging.info("Successfully inserted release want/haves data.")
+        logging.info(f"Successfully inserted {len(releases)} release want/haves data.")
     except Exception as e:
-        logging.error(f"Failed to insert release want/haves data: {e}")
+        logging.error(f"Failed to insert {len(releases)} release want/haves data: {e}")
 
 
 def main():

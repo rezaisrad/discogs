@@ -9,7 +9,7 @@ class DiscogsPageBase:
     def __init__(self, url, session_manager):
         self.url = url
         self.session_manager = session_manager
-        self.session = self.session_manager.get_session() 
+        self.session, self.proxy = self.session_manager.get_session() 
     
     def fetch_page_content(self):
         logging.debug(f"Fetching page content for {self.url}")

@@ -20,7 +20,7 @@ class ProxyManager:
 
     def get_proxy(self):
         proxy = choice(self.proxies) if self.proxies else None
-        logging.debug(f"Selected proxy {proxy} for thread: {threading.current_thread().name}")
+        logging.debug(f"Selected proxy {proxy['http']} for thread: {threading.current_thread().name}")
         return proxy
 
     def replace_proxy(self, old_proxy):
@@ -30,4 +30,11 @@ class ProxyManager:
     def remove_proxy(self, proxy):
         if proxy in self.proxies:
             self.proxies.remove(proxy)
-            logging.debug(f"Removed proxy {proxy} from the list.")
+            logging.debug(f"Removed proxy {proxy['http']} from the list.")
+
+    def validate_proxy(self, proxy):
+        try:
+            response = requests.get("https://httpbin.org/ip", proxies={"http": proxy}, timeout=5)
+            return response.status_code == 200
+        except requests.RequestException:
+            return False
