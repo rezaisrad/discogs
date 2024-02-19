@@ -1,66 +1,86 @@
 # Discogs Data Scraper
 
 ## Overview
-A streamlined tool for extracting music release information from Discogs, designed for efficiency and ease of use. Utilizes multi-threading, proxy rotation, and integrates with PostgreSQL for data storage.
+Tool for extracting music release information from Discogs, designed for efficiency and ease of use. Utilizes multi-threading, proxy rotation, and integrates with PostgreSQL for data storage.
 
-## Quick Start
-1. **Setup Environment**
-   - Requires Python 3.7+.
-   - Install dependencies: `pip install -r requirements.txt`.
-   - Setup `.env` with PostgreSQL and proxy details. (use the `.env.example` for guidance)
+## Project Structure
 
-2. **Run Scraper**
-   ```bash
-   python main.py
+- `db/`: SQL scripts for database initialization and cleanup.
+- `examples/`: Jupyter notebooks for sandbox testing and examples.
+- `src/`: Main source code directory.
+  - `managers/`: Proxy and session management utilities.
+  - `models/`: Data models and sinks for processing and storing fetched data.
+  - `scraper/`: Core scraper functionality.
+  - `utils/`: Utility scripts for XML handling and parser utilities.
+- `tests/`: Unit tests for the various components of the scraper.
+- `requirements.txt`: Project dependencies.
+- `main.py`: Entry point for running the scraper.
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.9 or higher
+- PostgreSQL database
+
+### Installation
+
+1. **Clone the Repository**
+
+   ```
+   git clone https://github.com/your-github-username/your-repo-name.git
+   cd your-repo-name
    ```
 
-## Components
+2. **Set Up a Virtual Environment (optional)**
 
-### `main.py`
-Entry point. Processes release IDs in batches and writes data to PostgreSQL.
-- **Example**: Batch process and store data.
-  ```python
-  # main.py snippet
-  for i in range(0, len(release_ids), BATCH_SIZE):
-      batch_ids = release_ids[i:i + BATCH_SIZE]
-      releases = scraper.run_scraper(URL, batch_ids, MAX_WORKERS)
-      write_to_postgres(p, releases)
-  ```
+   ```
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
-### `scraper.py`
-Manages proxy rotation and scraping tasks.
-- **Usage**: Fetch release data.
-  ```python
-  # Using run_scraper
-  releases = scraper.run_scraper(PROXY_URL, release_ids, MAX_WORKERS)
-  ```
+3. **Install Dependencies**
 
-### `data.py`
-Defines page interaction classes.
-- **Example**: Fetch and parse a release page.
-  ```python
-  # data.py snippet
-  release_page = DiscogsRelease(release_id)
-  release_page.fetch_and_parse()
-  ```
+   ```
+   pip install -r requirements.txt
+   ```
 
-### `xml_handler.py`
-For XML data ingestion.
-- **Example**: Parse XML to extract release data.
-  ```python
-  # Using XMLDataHandler
-  handler = XMLDataHandler(DATA_URL, DEST_DIR)
-  handler.download_file()
-  handler.parse_xml()
-  ```
+4. **Environment Configuration**
+
+   Copy the `.env.example` file to `.env` and update the variables to match your environment.
+
+   ```
+   cp .env.example .env
+   ```
+
+5. **Database Setup**
+
+   The files in the `db/` directory can help guide you in creating your database
+
+### Running the Scraper
+
+To start the scraper, use the `main.py` script.
+
+```
+python src/main.py
+```
+
+This will fetch data based on the configurations and save the results to your database.
 
 ## Usage
 
-1. **Configure Environment**
-   - Define environment variables in `.env`.
+### Running the Extractor
 
-2. **Running the Scraper**
-   - Execute `main.py` to start scraping Discogs based on a list of release IDs.
+`main.py` is designed to fetch release information from Discogs. Adjust the `QUERY_PATH` in `main.py` to specify the SQL query that will return the release IDs you want to pull additional information for.
 
-3. **Ingesting XML Data**
-   - Use `load.py` for XML-based workflows, adapting `XMLDataHandler` as needed.
+### XML Loading from File
+
+Utility scripts for XML processing are available under `src/utils/xml_handler.py`. These can be used for loading and parsing XML files as needed.
+
+### Testing
+
+Unit tests are located in the `tests/` directory. Run tests using pytest:
+
+```
+pytest tests/
+```
