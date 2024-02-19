@@ -1,8 +1,8 @@
 import os
 import logging
 from dotenv import load_dotenv
-from utils.xml_handler import XMLDataHandler
-from sinks.postgres import PostgresDataStore
+from utils.xml_handler import XMLDataHandler, ArtistParser
+from models.sinks.postgres import PostgresDataStore
 
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -31,7 +31,11 @@ def main():
     data_store = setup_data_store()
 
     # Initialize XMLDataHandler with the URL, destination directory, and data store
-    handler = XMLDataHandler(DATA_URL, DESTINATION_DIR, data_store=data_store)
+    handler = XMLDataHandler(DATA_URL,
+                             DESTINATION_DIR,
+                             data_store=data_store,
+                             parser_class=ArtistParser(),
+                             keep_file=True)
     try:
         handler.download_file()
         handler.parse_xml()

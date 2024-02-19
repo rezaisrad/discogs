@@ -1,5 +1,4 @@
 import logging
-import threading
 from urllib.parse import urlparse
 import requests
 from tqdm import tqdm
@@ -24,14 +23,17 @@ def log_method(func):
 
     return wrapper
 
-
 class XMLDataHandler:
-    def __init__(self, url, destination_dir="./", data_store=None):
+    def __init__(self, url, destination_dir="./",
+                 data_store=None, parser_class=None,
+                 keep_file=False):
         self.url = url
         self.destination_dir = destination_dir
         self.filename = self._get_filename_from_url()
         self.filepath = os.path.join(self.destination_dir, self.filename)
         self.data_store = data_store
+        self.parser_class = parser_class
+        self.keep_file = keep_file
 
     def _get_filename_from_url(self):
         parsed_url = urlparse(self.url)
@@ -43,7 +45,7 @@ class XMLDataHandler:
         if os.path.exists(self.filepath):
             logging.info(f"File already exists: {self.filepath}")
             return
-        logging.info(f"Downloading file to {self.filepath}")
+        logging.info(f"Downloading {self.parser_class.name} file to {self.filepath}")
         with (
             requests.get(self.url, stream=True) as response,
             open(self.filepath, "wb") as file,
@@ -58,34 +60,35 @@ class XMLDataHandler:
                 file.write(chunk)
                 progress_bar.update(len(chunk))
 
-    @log_method
     def parse_xml(self):
-        logging.info("Beginning XML parsing")
+        if not self.parser_class:
+            raise ValueError("Parser class not defined.")
         data_batch = []
-        release_count = 0
+        count = 0
+        logging.info(f"Beginning XML parsing for {self.parser_class.name}")
         try:
             with gzip.open(self.filepath, "rb") as gz_file:
-                for _, elem in etree.iterparse(gz_file, events=("end",), tag="release"):
-                    parsed_data = ReleaseParser(elem).parse()
-                    data_batch.append(parsed_data)
+                for _, elem in etree.iterparse(gz_file, events=("end",), tag=self.parser_class.name):
+                    parsed_data = self.parser_class.parse(elem)
+                    data_batch.append(parsed_data)  
                     elem.clear()
-                    release_count += 1
+                    count += 1
 
                     if len(data_batch) >= BATCH_SIZE:
                         logging.info(
-                            f"Inserting batch of {len(data_batch)} releases, total parsed: {release_count}"
+                            f"Inserting batch of {len(data_batch)} {self.parser_class.name}, total parsed: {count}"
                         )
                         self.data_store.insert(data_batch)
                         data_batch = []
 
                 if data_batch:
                     logging.info(
-                        f"Inserting final batch of {len(data_batch)} releases, total parsed: {release_count}"
+                        f"Inserting final batch of {len(data_batch)} {self.parser_class.name}, total parsed: {count}"
                     )
                     self.data_store.insert(data_batch)
 
-            # Successfully parsed and inserted data, now safe to delete the file
-            self.delete_file()
+            if not self.keep_file:
+                self.delete_file()
 
         except KeyboardInterrupt:
             logging.info(
@@ -94,7 +97,7 @@ class XMLDataHandler:
         except Exception as e:
             logging.error(f"Error during XML parsing or data insertion: {e}")
 
-        logging.info(f"Completed XML parsing, total releases parsed: {release_count}")
+        logging.info(f"Completed XML parsing, total {self.parser_class.name} parsed: {count}")
 
     @log_method
     def delete_file(self):
@@ -105,35 +108,133 @@ class XMLDataHandler:
         except OSError as e:
             logging.error(f"Error deleting file {self.filepath}: {e}")
 
+class BaseParser:
+    name = None
 
-class ReleaseParser:
-    def __init__(self, elem):
-        self.root = elem
+    def parse(self, elem):
+        raise NotImplementedError("The parse method must be implemented by subclasses.")
+    
+class ArtistParser:
+    name = 'artist'
 
-    def parse(self):
+    @staticmethod
+    def parse(elem):
+        logging.debug("Parsing artist data.")
+        try:
+            artist_info = {
+                "id": int(elem.findtext("id")),
+                "name": elem.findtext("name"),
+                "realname": elem.findtext("realname"),
+                "profile": elem.findtext("profile"),
+                "data_quality": elem.findtext("data_quality"),
+                "urls": [url.text for url in elem.findall("urls/url")],
+                "namevariations": [name.text for name in elem.findall("namevariations/name")]
+            }
+            
+            # Parsing images
+            artist_info["images"] = ArtistParser._parse_images(elem)
+            
+            # Parsing aliases
+            artist_info["aliases"] = ArtistParser._parse_aliases(elem)
+            
+            # Parsing groups
+            artist_info["groups"] = ArtistParser._parse_groups(elem)
+            
+            return artist_info
+        except Exception as e:
+            logging.error(f"Error parsing artist: {e}")
+            return {}
+
+    @staticmethod
+    def _parse_images(elem):
+        """
+        Parses the image information from an artist element.
+        
+        Args:
+            elem: An lxml.etree.Element representing an artist in the XML.
+            
+        Returns:
+            A list of dictionaries, each representing an image.
+        """
+        return [
+            {
+                "type": image.get("type"),
+                "uri": image.get("uri"),
+                "uri150": image.get("uri150"),
+                "width": image.get("width"),
+                "height": image.get("height")
+            }
+            for image in elem.findall("images/image")
+        ]
+
+    @staticmethod
+    def _parse_aliases(elem):
+        """
+        Parses the aliases from an artist element.
+        
+        Args:
+            elem: An lxml.etree.Element representing an artist in the XML.
+            
+        Returns:
+            A list of dictionaries, each representing an alias.
+        """
+        return [
+            {
+                "id": int(alias.get("id")),
+                "name": alias.text
+            }
+            for alias in elem.findall("aliases/name")
+        ]
+
+    @staticmethod
+    def _parse_groups(elem):
+        """
+        Parses the groups from an artist element.
+        
+        Args:
+            elem: An lxml.etree.Element representing an artist in the XML.
+            
+        Returns:
+            A list of dictionaries, each representing a group.
+        """
+        return [
+            {
+                "id": int(group.get("id")),
+                "name": group.text
+            }
+            for group in elem.findall("groups/name")
+        ]
+
+class ReleaseParser(BaseParser):
+    name = 'release'
+   
+    @staticmethod
+    def parse(elem):
         logging.debug("Parsing release data.")
-        return {
-            "id": self.root.attrib.get("id"),
-            "status": self.root.attrib.get("status"),
-            "title": self.root.findtext("title"),
-            "artists": self._parse_artists(),
-            "extraartists": self._parse_extra_artists(),
-            "labels": self._parse_labels(),
-            "formats": self._parse_formats(),
-            "genres": self._parse_elements(self.root, ".//genre"),
-            "styles": self._parse_elements(self.root, ".//style"),
-            "country": self.root.findtext("country"),
-            "released": self.root.findtext("released"),
-            "notes": self.root.findtext("notes"),
-            "data_quality": self.root.findtext("data_quality"),
-            "master_id": self._get_attribute(
-                self.root.find("master_id"), "is_main_release"
-            ),
-            "tracklist": self._parse_tracklist(),
-            "videos": self._parse_videos(),
-            "companies": self._parse_companies(),
-            "images": self._parse_images(),
-        }
+        try:
+            return {
+                "id": elem.attrib.get("id"),
+                "status": elem.attrib.get("status"),
+                "title": elem.findtext("title"),
+                "artists": ReleaseParser._parse_artists(elem),
+                "extraartists": ReleaseParser._parse_extra_artists(elem),
+                "labels": ReleaseParser._parse_labels(elem),
+                "formats": ReleaseParser._parse_formats(elem),
+                "genres": ReleaseParser._parse_elements(elem, ".//genre"),
+                "styles": ReleaseParser._parse_elements(elem, ".//style"),
+                "country": elem.findtext("country"),
+                "released": elem.findtext("released"),
+                "notes": elem.findtext("notes"),
+                "data_quality": elem.findtext("data_quality"),
+                "master_id": ReleaseParser._get_attribute(elem.find("master_id"), "is_main_release"),
+                "tracklist": ReleaseParser._parse_tracklist(elem),
+                "videos": ReleaseParser._parse_videos(elem),
+                "companies": ReleaseParser._parse_companies(elem),
+                "images": ReleaseParser._parse_images(elem),
+            }
+        except Exception as e:
+            logging.error(f"Error parsing release: {e}")
+            return {}
 
     def _get_attribute(self, elem, attr_name):
         """Safely gets an attribute from an element, returning None if the element or attribute doesn't exist."""
