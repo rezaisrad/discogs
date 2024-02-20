@@ -47,7 +47,7 @@ Run SQL scripts located in `db/` to set up and initialize your database.
 
 ### 1. XML Data Loading
 
-Load data from Discogs monthly dumps using `load.py`. This script downloads an XML.gz file, parses relevant fields, and loads data into PostgreSQL. Currently, it supports loading data for releases and artists, storing each record with a primary key and a JSONB column named `data`.
+Load data from [Discogs monthly dumps](https://discogs-data-dumps.s3.us-west-2.amazonaws.com/index.html) using `load.py`. This script downloads an XML.gz file, parses relevant fields, and loads data into PostgreSQL. Currently, it supports loading data for releases and artists, storing each record with a primary key and a JSONB column named `data`.
 
 Example usage for loading artist data:
 ```python
