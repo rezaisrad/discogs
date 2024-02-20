@@ -181,8 +181,10 @@ class DiscogsSellerPageBase(DiscogsPageBase):
             item['seller_rating'] = float(rating_match.group(1)) if rating_match else None
         else:
             item['seller_rating'] = None
+        
         ships_from_span = seller_info_cell.find('span', text='Ships From:')
-        item['ships_from'] = ships_from_span.next_sibling.strip() if ships_from_span else None
+        item['ships_from'] = ships_from_span.next_sibling.strip() if ships_from_span and ships_from_span.next_sibling else None
+
 
         # Price
         price_cell = row.find('td', class_='item_price')
