@@ -1,8 +1,9 @@
 # Discogs Data Extractor
 
 ## Overview
-
-This tool is designed for extracting and managing music release information from Discogs. It utilizes multi-threading for efficiency, proxy rotation for reliability, and integrates seamlessly with PostgreSQL for robust data storage.
+Two main features:
+1. Loading [Discogs monthly dump](https://discogs-data-dumps.s3.us-west-2.amazonaws.com/index.html) data into a Postgres db.
+2. Extracting additional data (sellers, sale history, etc.) not available via the API or the XML dump.
 
 ## Features
 
@@ -22,8 +23,8 @@ This tool is designed for extracting and managing music release information from
 
 1. Clone the repository and navigate into it:
    ```sh
-   git clone https://github.com/your-github-username/your-repo-name.git
-   cd your-repo-name
+   git clone git@github.com:rezaisrad/discogs.git
+   cd discogs
    ```
 2. (Optional) Set up a virtual environment:
    ```sh
@@ -47,7 +48,7 @@ Run SQL scripts located in `db/` to set up and initialize your database.
 
 ### 1. XML Data Loading
 
-Load data from Discogs monthly dumps using `load.py`. This script downloads an XML.gz file, parses relevant fields, and loads data into PostgreSQL. Currently, it supports loading data for releases and artists, storing each record with a primary key and a JSONB column named `data`.
+Load data from [Discogs monthly dumps](https://discogs-data-dumps.s3.us-west-2.amazonaws.com/index.html) using `load.py`. This script downloads an XML.gz file, parses relevant fields, and loads data into PostgreSQL. Currently, it supports loading data for releases and artists, storing each record with a primary key and a JSONB column named `data`.
 
 Example usage for loading artist data:
 ```python
