@@ -95,13 +95,12 @@ class DiscogsStatsPage(DiscogsPageBase):
 
 class DiscogsSellerPageBase(DiscogsPageBase):
     def __init__(self, url, session_manager, query_params=None):
-        super().__init__(url, session_manager)
-        self.query_params = query_params
         if query_params:
             query_string = urlencode(query_params)
-            url = f"{url}?{query_string}"
+            self.url = f"{url}?{query_string}"
         else:
-            url = url
+            self.url = url
+        super().__init__(url, session_manager)
         self.items_for_sale = []
 
     def fetch_and_parse(self):
