@@ -45,3 +45,37 @@ CREATE TABLE release_haves (
     username TEXT,
     PRIMARY KEY (release_id, username)
 );
+
+
+ALTER TABLE release_sellers ADD COLUMN created_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE release_details ADD COLUMN created_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE release_wants ADD COLUMN created_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE release_haves ADD COLUMN created_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE release_wants
+ADD CONSTRAINT fk_release_wants_release_id
+FOREIGN KEY (release_id) REFERENCES electronic_releases(id);
+
+ALTER TABLE release_haves
+ADD CONSTRAINT fk_release_haves_release_id
+FOREIGN KEY (release_id) REFERENCES electronic_releases(id);
+
+ALTER TABLE release_sellers
+ADD CONSTRAINT fk_release_sellers_release_id
+FOREIGN KEY (release_id) REFERENCES electronic_releases(id);
+
+ALTER TABLE release_details
+ADD CONSTRAINT fk_release_details_release_id
+FOREIGN KEY (release_id) REFERENCES electronic_releases(id);
+
+ALTER TABLE videos ADD COLUMN video_id CHAR(11);
+
+UPDATE release_videos
+SET video_id = REGEXP_REPLACE(src, '.*[?&]v=([^&]+).*', '\1', 'g');
+
+ALTER TABLE videos DROP COLUMN src;
+
+DELETE FROM artists
+USING release_artists
+WHERE artists.artist_id = release_artists.artist_id
+AND release_artists.artist_id IS NULL;
