@@ -68,13 +68,6 @@ ALTER TABLE release_details
 ADD CONSTRAINT fk_release_details_release_id
 FOREIGN KEY (release_id) REFERENCES electronic_releases(id);
 
-ALTER TABLE videos ADD COLUMN video_id CHAR(11);
-
-UPDATE release_videos
-SET video_id = REGEXP_REPLACE(src, '.*[?&]v=([^&]+).*', '\1', 'g');
-
-ALTER TABLE videos DROP COLUMN src;
-
 DELETE FROM artists
 USING release_artists
 WHERE artists.artist_id = release_artists.artist_id
