@@ -4,8 +4,6 @@ CREATE TABLE electronic_releases (
     data JSONB
 );
 
-DROP TABLE releases;
-
 INSERT INTO electronic_releases (id, data)
 SELECT (data->>'id')::INT AS id,
        data
