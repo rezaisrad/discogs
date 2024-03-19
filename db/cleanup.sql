@@ -113,6 +113,13 @@ FROM
     electronic_releases er,
     jsonb_array_elements(er.data->'formats') AS jsonb_format;
 
+ALTER TABLE release_videos ADD COLUMN video_id CHAR(11);
+
+UPDATE release_videos
+SET video_id = REGEXP_REPLACE(src, '.*[?&]v=([^&]+).*', '\1', 'g');
+
+ALTER TABLE release_videos DROP COLUMN src;
+
 ALTER TABLE release_formats
 ADD CONSTRAINT fk_release_formats_release_id
 FOREIGN KEY (release_id) REFERENCES electronic_releases(id);
